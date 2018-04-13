@@ -1,0 +1,40 @@
+language: python
+python: '2.7'
+sudo: required
+dist: trusty
+services:
+- docker
+git:
+  submodules: false
+before_install:
+- git submodule update --init --recursive
+- git submodule foreach git pull origin master
+- sudo apt-get update -qq
+- sudo apt-get install -qq squashfs-tools uuid python-apt python-pycurl btrfs-tools
+install:
+- sudo pip install ansible==2.4.3
+- sudo pip install docker-py
+script:
+- cd squashible
+- sudo ansible-playbook -i hosts_generator.py squashible.yml -e "live_os=ubuntu_18.04"
+- ls -lah live_output
+- sudo chown -R travis:travis live_output
+- cd live_output
+- cp * ../../
+- cd ../../
+before_deploy:
+  # Set up git user name and tag this commit
+  - git config --local user.name "Antony Messerli"
+  - git config --local user.email "antony@mes.ser.li"
+  - git tag "$(date +'%Y%m%d%H%M%S')-$(git log --format=%h -1)"
+deploy:
+  provider: releases
+  api_key:
+    secure: MG75nKM+x9gM4EMCHPWrlmI6WpN+ynMAqeTTiuVm1cvcKdR8NCgqVwaWKkfg2FDbk4ceWtxQdrL1rpu/1PG4lFCD63Uk9zevgTaNFxH4hXo6UKQOCH3SZt1Mod61619MxI1BGhl+Ih9Uy1KYv4llRgAUZa6OJO+iL/6bJh6aeMUjf6azh++bc/OIF5858euRIllh4PeRfmep8kzQEIH2NC5KNptDjEzChZlToer3CqIKgIC8erKi4Fp4V4DHZa/lOwunKjFCNtPNC4CIUz01q+kOo1OoeujIfGfwNReWlRHINHUokzUISp9/ryv0/QDIPxv+ODjLQ5OP3uUgOnCfLi59BXpEpVLqKBrioby2DVbGqZppj+v3oEQvQqakvsIG3JS+91+N/MWmAdFf5Lr/jDmtxiyKA3bXn98lsxTMhQFxI9kd4ap6jJbarn6iKYYmrv9zhGOXs9NelEVAAIcVwevded36tcVz/pWk9USG8uSjO076P7OVSkythgMPt/HxVQZlNniVmzS2493TXcVB+/TCCObHq/Oo+RgdoH7QKDynEAmtWrvcydmXzEpqR7nikjhTgv1uoXtUREH5oUQjHxCjWbcCFpwbQig74dpvNsk3s6REonChgbQ88D8y75gZLpsGEdD8dc3u0QFV2GwYTv6/JuKc2XqLv/58xYSrUCU=
+  file:
+  - vmlinuz
+  - initrd.img
+  - rootfs.img
+  on:
+    repo: squashible/squashible-ubuntu-18.04-minimal
+  skip_cleanup: true
